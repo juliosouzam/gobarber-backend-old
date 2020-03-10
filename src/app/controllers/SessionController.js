@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import * as Yup from 'yup';
 import User from '../models/User';
+import File from '../models/File';
 
 import authConfig from '../../config/auth';
 
@@ -18,7 +19,16 @@ class SessionController {
     }
 
     const { email, password } = req.body;
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({
+      where: { email },
+      include: [
+        {
+          model: File,
+          as: 'avatar',
+          attributes: ['id', 'path', 'url'],
+        },
+      ],
+    });
 
     if (!user) {
       return res.status(400).json({ error: 'Email or Password invalid!' });
@@ -28,13 +38,15 @@ class SessionController {
       return res.status(400).json({ error: 'Email or Password invalid!' });
     }
 
-    const { id, name } = user;
+    const { id, name, provider, avatar } = user;
 
     return res.json({
       user: {
         id,
         name,
         email,
+        provider,
+        avatar,
       },
       token: jwt.sign({ id, name }, authConfig.secret, {
         expiresIn: authConfig.expiresIn,
